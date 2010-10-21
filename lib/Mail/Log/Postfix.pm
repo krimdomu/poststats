@@ -99,6 +99,20 @@ sub next {
 	return $self->{'__mails'}->[$self->{'__line'}++];
 }
 
+sub search {
+	my $self = shift;
+	my $s = { @_ };
+
+	while(my $row = $self->next) {
+		if($row->{'message-id'} eq $s->{'message_id'}) {
+			return 1;
+		}
+	}
+
+	$self->{'__line'} = 0;
+	return 0;
+}
+
 
 sub _parse_line {
 	my $self = shift;

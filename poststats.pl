@@ -39,6 +39,33 @@ if($e = Exception::Class->caught('DM4P::Exception::Connect')) {
 	exit 1;
 }
 
+my $select = DM4P::SQL::Query::SELECT->new()
+			->field("#message_id")
+			->from("#metadata")
+			->where("#id=?");
+my $stm = $db->get_statement($select);
+$stm->bind(1, 1);
+my $res = eval { $stm->execute(); };
+
+if($e = Exception::Class->caught('DM4P::Exception::SQL')) {
+	die("error getting metadata");
+}
+
+my @msg_ids = $res->get_all();
+$stm->finish();
+if(scalar(@msg_ids) == 0) {
+	my $insert = DM4P::SQL::Query::INSERT->new()
+			->table('metadata')
+				->id(1)
+				->last_run('0000-00-00 00:00:00')
+				->message_id('');
+	$stm = $db->get_statement($insert);
+	$stm->execute();
+	$stm->finish();
+} else {
+	$maillog->search(message_id => $msg_ids[0]->{'message_id'});
+}
+
 while(my $row = $maillog->next) {
 	write_db_entry($row);
 }
@@ -59,6 +86,22 @@ sub write_db_entry {
 				->message_id($data->{'message-id'});
 
 	my $stm = $db->get_statement($insert);
+	eval { $stm->execute(); $stm->finish(); };
+
+	my $e;
+	if($e = Exception::Class->caught('DM4P::Exception::SQL')) {
+		return;
+	}
+
+	my $update = DM4P::SQL::Query::UPDATE->new()
+			->table('metadata')
+				->set()
+					->last_run($data->{'date'})
+					->message_id($data->{'message-id'})
+				->where("#id=?");
+	$stm = $db->get_statement($update);
+	$stm->bind(1, 1);
 	$stm->execute();
+	$stm->finish();
 }
 
