@@ -1,0 +1,2 @@
+Poststats is a small script to read postfix logfiles and to write them to a database for better analysis.
+
